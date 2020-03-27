@@ -53,7 +53,7 @@ services:
   name: jaeger-example-app 
   env: go
   plan: starter 
-  startCommand: cd example && go run example/main.go
+  startCommand: cd example && go run main.go
   envVars:
     - key: COLLECTOR_HOST
       fromService:

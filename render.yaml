@@ -1,0 +1,64 @@
+services:
+# jaeger-collector configured to accept zipkin traces
+- type: pserv
+  name: jaeger-collector
+  env: docker
+  dockerfilePath: ./collector/Dockerfile
+  dockerContext: ./collector
+  plan: starter
+  envVars:
+    - key: SPAN_STORAGE_TYPE
+      value: elasticsearch # configure collector to store spans in elasticsearch.
+    - key: ES_SERVER_HOST
+      fromService:
+        name: jaeger-storage-elasticsearch
+        type: pserv
+        property: host # port will always be 9200
+    - key: COLLECTOR_ZIPKIN_HTTP_PORT
+      value: 9411
+# jaeger-storage
+- type: pserv
+  name: jaeger-storage-elasticsearch
+  env: docker
+  dockerfilePath: ./storage/Dockerfile
+  dockerContext: ./storage
+  plan: starter plus
+  disk:
+    name: esdata
+    mountPath: /usr/share/elasticsearch/data
+    sizeGB: 10
+  envVars:
+  - key: ES_JAVA_OPTS
+    value: "-Xms512m -Xmx512m"
+  - key: discovery.type
+    value: single-node
+  - key: cluster.name
+    value: elastic
+# jaeger-ui
+- type: web
+  name: jaeger-ui
+  env: docker
+  dockerfilePath: ./ui/Dockerfile
+  dockerContext: ./ui
+  plan: starter
+  envVars:
+    - key: SPAN_STORAGE_TYPE
+      value: elasticsearch # configure collector to store spans in elasticsearch.
+    - key: ES_SERVER_HOST
+      fromService:
+        name: jaeger-storage-elasticsearch
+        type: pserv
+        property: host # port will always be 9200
+- type: pserv 
+  name: jaeger-example-app 
+  env: go
+  plan: starter 
+  startCommand: cd example && go run example/main.go
+  envVars:
+    - key: COLLECTOR_HOST
+      fromService:
+        name: jaeger-collector
+        type: pserv
+        property: host
+
+
